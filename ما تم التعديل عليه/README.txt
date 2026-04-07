@@ -10,7 +10,8 @@ ALTER TABLE support_tickets ADD INDEX (status);
 ALTER TABLE support_tickets ADD INDEX (created_at);
 =
 
-انسح الملف كامل و سوي استبدال الى في حال كان في معك في احد هذي المللفات تعديل 
+انسح الملف كامل و سوي استبدال الا في حال كان في معك في احد هذي المللفات تعديل يفضل ان انت تنسخ الكود كامل من الملف الذي انا عدلت عليه و الملف الي انت عدلت عليه و اسال جيمناي 
+و من المهم ان انت تتحق من ان الكود بعد الدمج يعمل بشكل كامل ملاحظه اضافي اتاكد ان انت تعدل على ملف (\baseer_project\api_backend\database.py) بحيث يكون كلمه السر صح او ع يطلع لك مشكله بسبب كلمة السر 
 1
 \baseer_project\api_backend\database.py
 \baseer_project\api_backend\main.py
