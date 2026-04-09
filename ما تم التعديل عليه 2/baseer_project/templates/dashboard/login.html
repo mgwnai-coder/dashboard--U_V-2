@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>بصير | بوابة الإدارة</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 576 512'><path fill='%230ea5e9' d='M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4C142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 92.9-131.1c3.3-7.9 3.3-16.7 0-24.6c-14.8-35.7-46.1-87.7-92.9-131.1C433.5 68.8 368.8 32 288 32zM128 256a160 160 0 1 1 320 0 160 160 0 1 1 -320 0zm160 80a80 80 0 1 0 0-160 80 80 0 1 0 0 160z'/></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { bgDark: '#0f172a', primary: '#0ea5e9', secondary: '#8b5cf6', accent: '#2dd4bf' },
+                    fontFamily: { sans: ['Tajawal', 'sans-serif'], en: ['ui-sans-serif', 'system-ui'] },
+                    animation: {
+                        'blob': 'blob 7s infinite',
+                        'fade-in-up': 'fadeInUp 0.6s ease-out forwards',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        blob: {
+                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                            '100%': { transform: 'translate(0px, 0px) scale(1)' },
+                        },
+                        fadeInUp: {
+                            '0%': { opacity: '0', transform: 'translateY(30px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-bgDark min-h-screen flex items-center justify-center relative overflow-hidden font-sans selection:bg-primary/30 selection:text-white">
+    
+    <div class="absolute top-1/4 -right-20 w-96 h-96 bg-primary/20 rounded-full blur-[100px] -z-10 animate-blob"></div>
+    <div class="absolute bottom-1/4 -left-20 w-96 h-96 bg-secondary/20 rounded-full blur-[100px] -z-10 animate-blob" style="animation-delay: 2s;"></div>
+
+    <div class="w-full max-w-md p-8 sm:p-10 bg-white/[0.03] border border-white/10 border-t-white/20 rounded-3xl backdrop-blur-2xl shadow-2xl z-10 mx-4 animate-fade-in-up">
+        
+        <div class="text-center mb-8">
+            <div class="w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-2xl mx-auto flex items-center justify-center shadow-[0_0_30px_rgba(14,165,233,0.3)] mb-5 border border-white/20 animate-float">
+                <i class="fa-solid fa-eye text-3xl text-white drop-shadow-md"></i>
+            </div>
+            <h1 class="text-3xl font-extrabold text-white mb-2 tracking-tight">بصـيـر</h1>
+            <p class="text-slate-400 text-sm font-medium">بوابة الإدارة والتحكم (Admin Portal)</p>
+        </div>
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center gap-3 shadow-sm">
+                    <i class="fa-solid fa-circle-exclamation text-lg animate-pulse"></i>
+                    <p class="text-sm font-bold">{{ message }}</p>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="POST" action="{% url 'admin_login' %}" class="space-y-6">
+            {% csrf_token %}
+            
+            <div class="group relative">
+                <label class="block text-sm font-bold text-slate-300 mb-2 group-focus-within:text-primary transition-colors">البريد الإلكتروني</label>
+                <div class="relative">
+                    <input type="email" name="email" required class="w-full bg-black/20 hover:bg-black/40 border border-white/10 text-white rounded-xl px-5 py-3.5 pr-12 focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all duration-300 text-left font-en placeholder:text-slate-600" dir="ltr" placeholder="admin@baseer.com">
+                    <i class="fa-solid fa-envelope absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors"></i>
+                </div>
+            </div>
+
+            <div class="group relative">
+                <label class="block text-sm font-bold text-slate-300 mb-2 group-focus-within:text-primary transition-colors">كلمة المرور</label>
+                <div class="relative">
+                    <input type="password" name="password" required class="w-full bg-black/20 hover:bg-black/40 border border-white/10 text-white rounded-xl px-5 py-3.5 pr-12 focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all duration-300 text-left font-en placeholder:text-slate-600" dir="ltr" placeholder="••••••••">
+                    <i class="fa-solid fa-lock absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-primary transition-colors"></i>
+                </div>
+            </div>
+
+            <button type="submit" class="group w-full bg-gradient-to-l from-primary to-secondary text-white font-bold py-3.5 rounded-xl transition-all duration-300 shadow-[0_5px_20px_-5px_rgba(14,165,233,0.5)] hover:shadow-[0_8px_25px_-5px_rgba(14,165,233,0.7)] hover:-translate-y-0.5 active:translate-y-0 flex items-center justify-center gap-3 mt-8 border border-white/10">
+                <span>تسجيل الدخول</span>
+                <i class="fa-solid fa-arrow-left-long transition-transform duration-300 group-hover:-translate-x-2"></i>
+            </button>
+        </form>
+
+        <div class="mt-8 pt-6 border-t border-white/5 flex justify-center items-center gap-2">
+            <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+            <p class="text-slate-500 text-xs font-medium">
+                بوابة محمية بتشفير عالي الأمان
+            </p>
+        </div>
+    </div>
+</body>
+</html>

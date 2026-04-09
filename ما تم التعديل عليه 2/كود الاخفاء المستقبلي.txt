@@ -1,0 +1,69 @@
+Gemini said
+تفكير استباقي وممتاز جداً يا مهندس يوسف! 👏 حفظ الأكواد الجاهزة لبيئة الإنتاج (Production) في أرشيفك الخاص هو تصرف "مهندس برمجيات محترف" (Senior Developer)، لأنه يوفر عليك ساعات من البحث لاحقاً.
+
+الفرق الجوهري بين كود (التطوير المحلي) وكود (الاستضافة الحقيقية) هو السرية. في الاستضافة الحقيقية، يُمنع منعاً باتاً كتابة اسم المستخدم وكلمة المرور كنص مكشوف داخل ملف main.py (لأنه قد يُرفع إلى GitHub بالخطأ ويُسرق).
+
+بدلاً من ذلك، نقوم بسحب هذه البيانات الحساسة من ملف بيئة مخفي يسمى .env موجود فقط على السيرفر.
+
+إليك الكود الاحترافي الجاهز للاستخدام في المستقبل عند رفع الموقع:
+
+1. الكود الذي سيُكتب داخل main.py (نسخة الإنتاج)
+هنا نستخدم مكتبة os المدمجة في بايثون لقراءة المتغيرات من السيرفر.
+
+Python
+import os
+import secrets
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
+
+# =========================================================
+# 🛡️ إعدادات حماية صفحة التوثيق (Production Ready)
+# =========================================================
+security = HTTPBasic()
+
+def get_current_username(credentials: HTTPBasicCredentials = Depends(security)):
+    # 1. جلب بيانات الدخول بشكل آمن من بيئة السيرفر (Environment Variables)
+    # إذا لم يجد الملف، سيستخدم "admin" كقيمة احتياطية (Fallback)
+    CORRECT_USERNAME = os.getenv("DOCS_USERNAME", "admin")
+    CORRECT_PASSWORD = os.getenv("DOCS_PASSWORD", "admin123456") 
+
+    # 2. مقارنة البيانات المدخلة مع البيانات الصحيحة بأمان (تمنع هجمات Timing Attacks)
+    is_correct_username = secrets.compare_digest(credentials.username, CORRECT_USERNAME)
+    is_correct_password = secrets.compare_digest(credentials.password, CORRECT_PASSWORD)
+    
+    if not (is_correct_username and is_correct_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="كلمة المرور غير صحيحة",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return credentials.username
+
+# تركيب الحارس على مسار الـ Docs
+@app.get("/docs", include_in_schema=False)
+async def custom_swagger_ui_html(username: str = Depends(get_current_username)):
+    from fastapi.openapi.docs import get_swagger_ui_html
+    return get_swagger_ui_html(
+        openapi_url=app.openapi_url,
+        title=app.title + " - Swagger UI",
+        oauth2_redirect_url=app.swagger_ui_oauth2_redirect_url,
+        swagger_js_url="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js",
+        swagger_css_url="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css",
+    )
+2. ملف البيئة .env (على السيرفر الحقيقي)
+عندما تستأجر استضافة (مثل DigitalOcean أو AWS)، ستقوم بإنشاء ملف مخفي في مجلد المشروع الرئيسي وتسميه .env، وتضع فيه بيانات الدخول الحقيقية والصعبة بهذا الشكل:
+
+Code snippet
+# ملف .env
+DOCS_USERNAME=yousef_production_admin
+DOCS_PASSWORD=Baseer_Secure_P@ssw0rd_2026!
+💡 نصيحة إضافية للمستقبل:
+لكي يعمل ملف .env بنجاح على سيرفرك أو حتى على جهازك المحلي لاحقاً، تذكر دائماً تثبيت هذه المكتبة الخفيفة التي تخبر بايثون بقراءة هذا الملف:
+pip install python-dotenv
+
+ثم تضيف سطرين فقط في أعلى ملف main.py:
+
+Python
+from dotenv import load_dotenv
+load_dotenv() # هذا السطر يقوم بتحميل كل المتغيرات السرية للذاكرة
+بهذا الكود، أنت تمتلك الآن نظام حماية احترافي بمعايير الشركات الكبرى، جاهز للنسخ واللصق في أي مشروع مستقبلي!

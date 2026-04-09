@@ -1,0 +1,256 @@
+{% extends 'dashboard/base.html' %}
+{% block title %}بصير | نظرة عامة{% endblock %}
+
+{% block content %}
+<header id="welcome-header" class="shrink-0 flex justify-between items-start sm:items-center pr-2 transition-all duration-500 ease-in-out overflow-hidden opacity-100 max-h-32 mb-6">
+    <div>
+        <h2 class="text-3xl font-bold text-slate-800 dark:text-white tracking-wide">
+            مرحباً بعودتك، <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">{{ request.user.full_name|default:request.user.email }}</span>
+        </h2>
+        <p class="text-slate-600 dark:text-slate-400 mt-1 flex items-center text-sm">
+            <i class="fa-solid fa-circle-check text-accent text-xs ml-2"></i> جميع أنظمة الذكاء الاصطناعي تعمل بكفاءة
+        </p>
+    </div>
+    
+</header>
+
+<div id="main-scroll" class="flex-1 overflow-y-auto pb-10 pr-2 custom-scrollbar">
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+        
+        <div class="bento-card p-6 lg:col-span-2 flex flex-col justify-between relative overflow-hidden bg-white dark:bg-transparent border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-none">
+            <div class="absolute right-0 top-0 w-64 h-64 bg-gradient-to-bl from-secondary/10 dark:from-secondary/20 to-transparent rounded-full blur-3xl -z-10"></div>
+            <div class="flex justify-between items-start">
+                <div>
+                    <p class="text-slate-500 dark:text-slate-400 font-medium mb-1">إجمالي الجلسات التشخيصية</p>
+                    <h3 class="text-5xl font-bold text-slate-800 dark:text-white font-en tracking-tight">{{ total_sessions }}</h3>
+                </div>
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-secondary to-primary flex items-center justify-center shadow-lg shadow-secondary/30 text-white text-xl">
+                    <i class="fa-solid fa-wave-square"></i>
+                </div>
+            </div>
+            
+            <div class="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="bg-emerald-50 dark:bg-emerald-500/10 px-4 py-3 rounded-xl border border-emerald-100 dark:border-emerald-500/20 flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+                        <i class="fa-solid fa-user-doctor text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">إجمالي الأطباء بالمنصة</p>
+                        <p class="text-xl font-bold text-emerald-600 dark:text-emerald-400 font-en">{{ total_doctors }}</p>
+                    </div>
+                </div>
+                
+                <div class="bg-blue-50 dark:bg-blue-500/10 px-4 py-3 rounded-xl border border-blue-100 dark:border-blue-500/20 flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-lg bg-blue-100 dark:bg-blue-500/20 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                        <i class="fa-solid fa-users text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-xs text-slate-500 dark:text-slate-400 mb-1">إجمالي المرضى بالمنصة</p>
+                        <p class="text-xl font-bold text-blue-600 dark:text-blue-400 font-en">{{ total_users }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bento-card p-6 flex flex-col items-center justify-center relative bg-white dark:bg-transparent border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-none">
+            <p class="text-slate-500 dark:text-slate-400 font-medium absolute top-6 right-6">نسبة تدخل الأطباء</p>
+            <div class="relative w-32 h-32 mt-4 flex items-center justify-center">
+                <div class="w-24 h-24 rounded-full border-[4px] border-slate-200 dark:border-slate-700 !border-t-accent animate-spin absolute"></div>
+                <span class="text-3xl font-bold text-slate-800 dark:text-white font-en z-10">{{ doctor_intervention_rate }}<span class="text-sm text-accent">%</span></span>
+            </div>
+        </div>
+
+        <div class="bento-card p-6 flex flex-col justify-between relative group bg-white dark:bg-transparent border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-none">
+            <div class="flex justify-between items-start">
+                <p class="text-slate-500 dark:text-slate-400 font-medium">حالة الخوادم</p>
+                <i class="fa-solid fa-server text-slate-400 dark:text-slate-500 group-hover:text-primary transition-colors"></i>
+            </div>
+            <div class="space-y-4 mt-6">
+                <div>
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="text-slate-600 dark:text-slate-300">CPU</span><span class="text-primary font-en font-bold">{{ cpu_usage }}%</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden"><div class="h-full bg-primary rounded-full shadow-[0_0_10px_#0ea5e9]" style="width: {{ cpu_usage }}%"></div></div>
+                </div>
+                <div>
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="text-slate-600 dark:text-slate-300">RAM</span><span class="text-secondary font-en font-bold">{{ ram_usage }}%</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden"><div class="h-full bg-secondary rounded-full shadow-[0_0_10px_#8b5cf6]" style="width: {{ ram_usage }}%"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bento-card p-0 mb-8 relative bg-white dark:bg-transparent border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-none rounded-2xl">
+        
+        <div class="px-6 py-5 border-b border-slate-200 dark:border-white/5 flex justify-between items-center bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md sticky top-0 z-40 transition-all shadow-sm rounded-t-2xl">
+            <h3 class="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-3">
+                <span class="w-2 h-6 bg-primary rounded-full"></span> سجل التشخيص الحديث
+            </h3>
+            <button onClick="window.location.reload();" class="text-sm bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 text-slate-700 dark:text-white px-4 py-2 rounded-lg transition-all border border-slate-200 dark:border-white/10 flex items-center gap-2">
+                <i class="fa-solid fa-rotate-right text-primary"></i> تحديث
+            </button>
+        </div>
+        
+        <div class="overflow-x-auto">
+            <table class="w-full text-right border-collapse">
+                <thead class="bg-slate-100 dark:bg-black/20 text-slate-600 dark:text-slate-400 text-sm">
+                    <tr>
+                        <th class="px-6 py-4 font-semibold font-en">ID</th>
+                        <th class="px-6 py-4 font-semibold">اسم المريض</th>
+                        <th class="px-6 py-4 font-semibold">الطبيب المشرف</th>
+                        <th class="px-6 py-4 font-semibold">الحالة</th>
+                        <th class="px-6 py-4 font-semibold">التاريخ</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200 dark:divide-white/10 text-sm">
+                    {% for session in recent_sessions %}
+                    <tr class="hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors group">
+                        <td class="px-6 py-4 font-en font-bold text-primary">#DIA-{{ session.id }}</td>
+                        <td class="px-6 py-4 text-slate-800 dark:text-white font-medium flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-white/10">{{ session.patient.full_name|slice:":1" }}</div>
+                            {{ session.patient.full_name }}
+                        </td>
+                        <td class="px-6 py-4 text-slate-600 dark:text-slate-300">
+                            {% if session.doctor %}{{ session.doctor.full_name }}
+                            {% else %}<span class="bg-secondary/10 dark:bg-secondary/20 text-secondary px-2.5 py-1 rounded-md text-xs font-bold border border-secondary/20 dark:border-secondary/30"><i class="fa-solid fa-robot mr-1"></i> تشخيص ذاتي</span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if session.status == 'completed' %}
+                                <div class="flex items-center gap-2 text-accent"><div class="w-2 h-2 rounded-full bg-accent shadow-[0_0_8px_#2dd4bf]"></div><span class="font-bold">مكتمل</span></div>
+                            {% elif session.status == 'reviewed' %}
+                                <div class="flex items-center gap-2 text-blue-600 dark:text-blue-400"><div class="w-2 h-2 rounded-full bg-blue-500 dark:bg-blue-400 shadow-[0_0_8px_#3b82f6]"></div><span class="font-bold">تمت المراجعة</span></div>
+                            {% elif session.status == 'pending' %}
+                                <div class="flex items-center gap-2 text-yellow-600 dark:text-yellow-400"><div class="w-2 h-2 rounded-full bg-yellow-500 dark:bg-yellow-400 shadow-[0_0_8px_#facc15] animate-pulse"></div><span class="font-bold">قيد الانتظار</span></div>
+                            {% else %}
+                                <div class="flex items-center gap-2 text-slate-500 dark:text-slate-400"><div class="w-2 h-2 rounded-full bg-slate-400"></div><span>{{ session.status }}</span></div>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-slate-500 font-en">{{ session.created_at|date:"Y/m/d" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="px-6 py-12 text-center text-slate-500"><p>لا توجد بيانات تشخيصية مسجلة حالياً.</p></td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+<div class="bento-card p-0 mb-8 relative bg-white dark:bg-transparent border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-none rounded-2xl">
+        
+        <div class="px-6 py-5 border-b border-slate-200 dark:border-white/5 flex justify-between items-center bg-white/80 dark:bg-[#0f172a]/80 backdrop-blur-md sticky top-0 z-40 transition-all shadow-sm rounded-t-2xl">
+            <h3 class="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-3">
+                <span class="w-2 h-6 bg-purple-500 rounded-full"></span> تحليلات الأداء والنمو
+            </h3>
+        </div>
+
+        <div class="p-6 bg-white dark:bg-transparent rounded-b-2xl">
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8 mb-8">
+                {% include 'dashboard/components/chart_card.html' with chart_id="sessionsChart" title="معدل الجلسات خلال العام" chart_type="line" labels=months_labels values=monthly_sessions_values dataset_label="عدد الجلسات" bg_color="rgba(14, 165, 233, 0.1)" border_color="#0ea5e9" icon_class="fa-solid fa-arrow-trend-up" fill_bg=True %}
+                
+                {% include 'dashboard/components/chart_card.html' with chart_id="usersChart" title="التوزيع الديموغرافي للمنصة" chart_type="doughnut" labels=demographic_labels values=demographic_values bg_color="['#2dd4bf', '#8b5cf6', '#f59e0b']" border_color="rgba(0,0,0,0)" show_legend=True icon_class="fa-solid fa-chart-pie" %}
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <div class="lg:col-span-2">
+                    {% include 'dashboard/components/annual_performance_card.html' %}
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <div class="lg:col-span-3 h-full">
+                    {% include 'dashboard/components/chart_card.html' with chart_id="yearlyGrowthChart" title="نمو المنصة عبر السنوات" chart_type="bar" labels=all_years_labels values=all_years_values dataset_label="إجمالي الجلسات السنوية" bg_color="rgba(139, 92, 246, 0.2)" border_color="#8b5cf6" icon_class="fa-solid fa-chart-line" fill_bg=True %}
+                </div>
+            </div>
+
+            <div class="mt-8 mb-8">
+                {% include 'dashboard/components/chart_card.html' with chart_id="interventionTrendChart" title="معدل تدخل الأطباء السنوي (%)" chart_type="line" labels=intervention_years_labels values=intervention_rates_values dataset_label="نسبة التدخل %" bg_color="rgba(245, 158, 11, 0.1)" border_color="#f59e0b" icon_class="fa-solid fa-user-doctor" fill_bg=True %}
+            </div>
+
+        </div>
+    </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // دالة مساعدة لضمان استمرار عمل باقي المخططات لو حدث خلل في واحد
+    function drawChart(id, config) {
+        try {
+            const canvas = document.getElementById(id);
+            if (canvas) new Chart(canvas, config);
+        } catch (e) { console.error("Error drawing " + id, e); }
+    }
+
+    drawChart('sessionsChart', {
+        type: 'line',
+        data: {
+            labels: {{ months_labels|safe }},
+            datasets: [{
+                label: 'عدد الجلسات',
+                data: {{ monthly_sessions_values|safe }},
+                backgroundColor: 'rgba(14, 165, 233, 0.1)',
+                borderColor: '#0ea5e9',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    drawChart('usersChart', {
+        type: 'doughnut',
+        data: {
+            labels: {{ demographic_labels|safe }},
+            datasets: [{
+                data: {{ demographic_values|safe }},
+                backgroundColor: ['#2dd4bf', '#8b5cf6', '#f59e0b'],
+                borderWidth: 0
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: true } } }
+    });
+
+    drawChart('yearlyGrowthChart', {
+        type: 'bar',
+        data: {
+            labels: {{ all_years_labels|safe }},
+            datasets: [{
+                label: 'إجمالي الجلسات',
+                data: {{ all_years_values|safe }},
+                backgroundColor: 'rgba(139, 92, 246, 0.2)',
+                borderColor: '#8b5cf6',
+                borderWidth: 2,
+                borderRadius: 6
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+
+    drawChart('interventionTrendChart', {
+        type: 'line',
+        data: {
+            labels: {{ intervention_years_labels|safe }},
+            datasets: [{
+                label: 'نسبة التدخل %',
+                data: {{ intervention_rates_values|safe }},
+                backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                borderColor: '#f59e0b',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+    });
+});
+</script>
+{% endblock %}

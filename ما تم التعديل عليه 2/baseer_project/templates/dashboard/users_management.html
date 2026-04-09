@@ -1,0 +1,460 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}بصير | إدارة المستخدمين{% endblock %}
+
+{% block content %}
+<div x-data="{ 
+        userModalOpen: false, 
+        isEditMode: false,
+        formData: {
+            id: '',
+            full_name: '',
+            email: '',
+            phone: '',
+            role: 'patient',
+            password: ''
+        },
+        openModal(mode, id = '', name = '', email = '', role = 'patient', phone = '') {
+            this.isEditMode = (mode === 'edit');
+            this.formData.id = id;
+            this.formData.full_name = name;
+            this.formData.email = email;
+            this.formData.phone = phone;
+            this.formData.role = role;
+            this.formData.password = ''; 
+            this.userModalOpen = true;
+        },
+        submitData() {
+            const payload = this.formData;
+            const isEdit = this.isEditMode;
+            const apiUrl = isEdit ? `/dashboard/users/edit/${payload.id}/` : `/dashboard/users/add/`;
+
+            if(window.showLoader) window.showLoader();
+
+           fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Cache-Control': 'no-cache, no-store, must-revalidate'
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(async response => {
+                if(window.hideLoader) window.hideLoader();
+                this.userModalOpen = false;
+
+                if (!response.ok) {
+                    throw new Error('السيرفر أرجع خطأ: ' + response.status);
+                }
+
+                Swal.fire({
+                    title: isEdit ? 'تم التعديل!' : 'تمت الإضافة!',
+                    text: isEdit ? 'تم تحديث بيانات المستخدم بنجاح.' : 'تم إنشاء حساب المستخدم بنجاح.',
+                    icon: 'success',
+                    confirmButtonColor: '#10b981',
+                    background: document.documentElement.classList.contains('dark') ? '#1e293b' : '#ffffff',
+                    color: document.documentElement.classList.contains('dark') ? '#ffffff' : '#1e293b'
+                }).then(() => {
+                    window.location.reload(); 
+                });
+            })
+            .catch(error => {
+                if(window.hideLoader) window.hideLoader();
+                this.userModalOpen = false;
+                
+                console.error(error);
+                Swal.fire({
+                    title: 'خطأ في العملية!', 
+                    text: 'يبدو أن مسار الـ API غير جاهز في السيرفر (Django) أو هناك خطأ في حفظ البيانات.', 
+                    icon: 'error',
+                    confirmButtonColor: '#334155',
+                    background: document.documentElement.classList.contains('dark') ? '#1e293b' : '#ffffff',
+                    color: document.documentElement.classList.contains('dark') ? '#ffffff' : '#1e293b'
+                });
+            });
+        },
+        
+        // 🌟 المتغيرات والدالة الخاصة بالسجل الطبي 🌟
+        recordModalOpen: false,
+        recordData: null,
+        isLoadingRecord: false,
+        patientNameForRecord: '',
+
+        async openRecordModal(userId, name) {
+            this.patientNameForRecord = name;
+            this.recordData = null;
+            this.isLoadingRecord = true;
+            this.recordModalOpen = true;
+
+            try {
+                // جلب السجل الطبي من الدالة التي أنشأناها في Django
+                const response = await fetch(`/dashboard/users/${userId}/medical-record/`);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    this.recordData = data.data;
+                } else {
+                    this.recordData = 'not_found';
+                }
+            } catch (error) {
+                console.error('خطأ في جلب السجل:', error);
+                this.recordData = 'error';
+            } finally {
+                this.isLoadingRecord = false;
+            }
+        }
+    }" 
+    class="h-full flex flex-col relative">
+
+    {% if messages %}
+        <div class="mb-4 pr-2">
+            {% for message in messages %}
+                <div class="p-4 rounded-xl {% if message.tags == 'error' %}bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400{% else %}bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-400{% endif %} flex items-center gap-3">
+                    <i class="fa-solid fa-circle-info"></i><p class="text-sm font-bold">{{ message }}</p>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <header class="shrink-0 flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 pr-2">
+        <div>
+            <h2 class="text-2xl md:text-3xl font-bold text-slate-800 dark:text-white tracking-wide">قاعدة بيانات <span class="text-transparent bg-clip-text bg-gradient-to-r from-secondary to-primary">المستخدمين</span></h2>
+            <p class="text-slate-500 dark:text-slate-400 mt-1 text-xs md:text-sm">إدارة المرضى والأطباء والصلاحيات المتوفرة على النظام.</p>
+        </div>
+        
+        <button @click="openModal('add')" class="bg-secondary hover:bg-secondary/90 text-white px-5 py-2.5 rounded-full text-sm font-bold transition-all shadow-[0_0_15px_rgba(139,92,246,0.3)] flex items-center justify-center gap-2 w-full sm:w-auto">
+            <i class="fa-solid fa-plus"></i> مستخدم جديد
+        </button>
+    </header>
+
+    <div class="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-6 pr-2 pb-6">
+        
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 shrink-0">
+            <div class="bento-card p-4 flex items-center justify-between bg-white dark:bg-transparent border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-none">
+                <div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 font-medium mb-1">إجمالي الحسابات</p>
+                    <h4 class="text-2xl font-bold text-slate-800 dark:text-white font-en">{{ total_all|default:"0" }}</h4>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+            </div>
+
+            <div class="bento-card p-4 flex items-center justify-between bg-white dark:bg-transparent border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-none">
+                <div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 font-medium mb-1">إجمالي المرضى</p>
+                    <h4 class="text-2xl font-bold text-slate-800 dark:text-white font-en">{{ total_patients|default:"0" }}</h4>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-500/20">
+                    <i class="fa-solid fa-user-injured"></i>
+                </div>
+            </div>
+
+            <div class="bento-card p-4 flex items-center justify-between bg-white dark:bg-transparent border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-none">
+                <div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 font-medium mb-1">الكادر الطبي</p>
+                    <h4 class="text-2xl font-bold text-slate-800 dark:text-white font-en">{{ total_doctors|default:"0" }}</h4>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-500/20">
+                    <i class="fa-solid fa-user-doctor"></i>
+                </div>
+            </div>
+
+            <div class="bento-card p-4 flex items-center justify-between bg-white dark:bg-transparent border border-slate-200 dark:border-white/10 shadow-sm dark:shadow-none">
+                <div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 font-medium mb-1">الحسابات الموقوفة</p>
+                    <h4 class="text-2xl font-bold text-slate-800 dark:text-white font-en">{{ total_inactive|default:"0" }}</h4>
+                </div>
+                <div class="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-500/10 flex items-center justify-center text-red-600 dark:text-red-400 border border-red-100 dark:border-red-500/20">
+                    <i class="fa-solid fa-user-xmark"></i>
+                </div>
+            </div>
+        </div>
+
+        <form method="GET" action="{% url 'users_management' %}" class="bento-card p-4 flex flex-col lg:flex-row gap-4 items-center justify-between shrink-0">
+            <div class="relative w-full lg:w-96">
+                <input type="text" name="q" value="{{ search_query }}" placeholder="ابحث بالاسم، البريد..." class="w-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-sm rounded-xl px-5 py-3 pl-10 focus:outline-none focus:border-secondary/50 text-slate-800 dark:text-white transition-all placeholder:text-slate-400">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-4 text-slate-400 dark:text-slate-500"></i>
+            </div>
+            
+            <div class="flex items-center gap-3 w-full lg:w-auto overflow-x-auto hide-scroll pb-1 lg:pb-0">
+                <select name="role" class="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-sm rounded-xl px-4 py-3 text-slate-700 dark:text-slate-300 focus:outline-none focus:border-secondary/50 appearance-none pr-10 shrink-0 cursor-pointer">
+                    <option value="all" {% if selected_role == 'all' %}selected{% endif %}>كل الأدوار</option>
+                    <option value="patient" {% if selected_role == 'patient' %}selected{% endif %}>مرضى فقط</option>
+                    <option value="doctor" {% if selected_role == 'doctor' %}selected{% endif %}>أطباء فقط</option>
+                    <option value="admin" {% if selected_role == 'admin' %}selected{% endif %}>إدارة فقط</option>
+                </select>
+                
+                <select name="status" class="bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-sm rounded-xl px-4 py-3 text-slate-700 dark:text-slate-300 focus:outline-none focus:border-secondary/50 appearance-none pr-10 shrink-0 cursor-pointer">
+                    <option value="all" {% if selected_status == 'all' %}selected{% endif %}>كل الحالات</option>
+                    <option value="active" {% if selected_status == 'active' %}selected{% endif %}>نشط</option>
+                    <option value="inactive" {% if selected_status == 'inactive' %}selected{% endif %}>موقوف</option>
+                </select>
+
+                <button type="submit" class="w-12 h-12 shrink-0 rounded-xl bg-secondary/10 dark:bg-secondary/20 border border-secondary/20 dark:border-secondary/30 flex items-center justify-center text-secondary hover:bg-secondary hover:text-white transition-colors cursor-pointer shadow-sm dark:shadow-none">
+                    <i class="fa-solid fa-filter"></i>
+                </button>
+
+                {% if search_query or selected_role != 'all' or selected_status != 'all' %}
+                <a href="{% url 'users_management' %}" class="w-12 h-12 shrink-0 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-red-50 hover:text-red-500 dark:hover:text-red-400 transition-colors">
+                    <i class="fa-solid fa-xmark"></i>
+                </a>
+                {% endif %}
+            </div>
+        </form>
+
+        <div class="bento-card p-0 overflow-hidden shrink-0 flex flex-col">
+            <div class="px-6 py-5 border-b border-slate-200 dark:border-white/5 flex justify-between items-center bg-slate-50 dark:bg-white/[0.02] shrink-0">
+                <h3 class="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-3">
+                    <span class="w-2 h-6 bg-secondary rounded-full"></span> القائمة الشاملة
+                </h3>
+                
+                <button onclick="exportTableToExcel('usersTable', 'قاعدة_بيانات_المستخدمين')" class="text-sm bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 px-4 py-2 rounded-lg transition-all border border-emerald-200 dark:border-emerald-500/20 flex items-center gap-2 font-bold shadow-sm dark:shadow-none">
+                    <i class="fa-solid fa-file-excel"></i> تصدير Excel
+                </button>
+            </div>
+            
+            <div class="overflow-x-auto w-full">
+                <table id="usersTable" class="w-full text-right border-collapse min-w-[700px]">
+                    <thead class="bg-slate-100 dark:bg-black/20 text-slate-600 dark:text-slate-400 text-sm">
+                        <tr>
+                            <th class="px-6 py-4 font-bold">المستخدم</th>
+                            <th class="px-6 py-4 font-bold">الدور (Role)</th>
+                            <th class="px-6 py-4 font-bold">الحالة</th>
+                            <th class="px-6 py-4 font-bold">تاريخ الانضمام</th>
+                            <th class="px-6 py-4 font-bold text-center">إجراءات</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-200 dark:divide-white/5 text-sm">
+                        {% for user in users %}
+                        <tr class="hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors group">
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-3 min-w-[200px]">
+                                    <div class="w-10 h-10 shrink-0 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center text-sm font-bold text-slate-700 dark:text-white shadow-inner uppercase font-en border border-slate-300 dark:border-transparent">
+                                        {{ user.full_name|default:user.email|slice:":1" }}
+                                    </div>
+                                    <div class="truncate">
+                                        <p class="text-slate-800 dark:text-white font-bold truncate">{{ user.full_name|default:"غير محدد" }}</p>
+                                        <p class="text-xs text-slate-500 dark:text-slate-400 font-en truncate">{{ user.email }}</p>
+                                        {% if user.phone %}
+                                        <p class="text-[10px] text-slate-400 dark:text-slate-500 font-en truncate mt-0.5"><i class="fa-solid fa-phone mr-1 opacity-70"></i>{{ user.phone }}</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if user.role == 'doctor' %}
+                                    <span class="bg-primary/10 dark:bg-primary/20 text-primary px-3 py-1 rounded-lg text-xs font-bold border border-primary/20 flex items-center gap-1.5 w-max">
+                                        <i class="fa-solid fa-user-doctor"></i>
+                                        {{ user.doctor_profile.specialty.name|default:"طبيب عام" }}
+                                    </span>
+                                {% elif user.role == 'admin' %}
+                                    <span class="bg-secondary/10 dark:bg-secondary/20 text-secondary px-3 py-1 rounded-lg text-xs font-bold border border-secondary/20 flex items-center gap-1.5 w-max">
+                                        <i class="fa-solid fa-shield-halved"></i> مدير
+                                    </span>
+                                {% else %}
+                                    <span class="bg-slate-100 dark:bg-slate-700/50 text-slate-600 dark:text-slate-300 px-3 py-1 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-600 flex items-center gap-1.5 w-max">
+                                        <i class="fa-solid fa-user"></i> مريض
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                {% if user.is_active %}
+                                    <div class="flex items-center gap-2 text-accent w-max"><div class="w-2 h-2 rounded-full bg-accent shadow-[0_0_8px_#2dd4bf]"></div><span class="font-bold text-xs">نشط</span></div>
+                                {% else %}
+                                    <div class="flex items-center gap-2 text-red-500 dark:text-red-400 w-max"><div class="w-2 h-2 rounded-full bg-red-500 dark:bg-red-400 shadow-[0_0_8px_#f87171] animate-pulse"></div><span class="font-bold text-xs">موقوف</span></div>
+                                {% endif %}
+                            </td>
+                            <td class="px-6 py-4 text-slate-600 dark:text-slate-400 font-en whitespace-nowrap">{{ user.created_at|date:"Y/m/d" }}</td>
+                            <td class="px-6 py-4 text-center whitespace-nowrap">
+                                <div class="flex items-center justify-center gap-2 lg:opacity-0 group-hover:opacity-100 transition-opacity">
+                                    
+                                    {% if user.role == 'patient' %}
+                                    <button type="button" @click="openRecordModal('{{ user.id }}', '{{ user.full_name|default:user.email|escapejs }}')" class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/5 hover:bg-teal-50 dark:hover:bg-teal-500/20 text-slate-500 dark:text-slate-400 hover:text-teal-500 transition-colors flex items-center justify-center border border-slate-200 dark:border-transparent" title="عرض السجل الطبي">
+    <i class="fa-solid fa-notes-medical"></i>
+</button>
+                                    {% endif %}
+
+                                    <button type="button" @click="openModal('edit', '{{ user.id }}', '{{ user.full_name|escapejs }}', '{{ user.email|escapejs }}', '{{ user.role }}', '{{ user.phone|default:""|escapejs }}')" class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/5 hover:bg-primary/10 dark:hover:bg-primary/20 text-slate-500 dark:text-slate-400 hover:text-primary transition-colors flex items-center justify-center border border-slate-200 dark:border-transparent" title="تعديل">
+                                        <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    
+                                    <form method="POST" action="{% url 'toggle_user_status' user.id %}" class="inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/5 {% if user.is_active %}hover:bg-red-50 dark:hover:bg-red-500/20 hover:text-red-500 dark:hover:text-red-400 border-slate-200 hover:border-red-200{% else %}hover:bg-accent/10 dark:hover:bg-accent/20 hover:text-accent border-slate-200 hover:border-accent/30{% endif %} text-slate-500 dark:text-slate-400 transition-colors flex items-center justify-center border dark:border-transparent" title="{% if user.is_active %}إيقاف الحساب{% else %}تفعيل الحساب{% endif %}">
+                                            <i class="fa-solid {% if user.is_active %}fa-ban{% else %}fa-check{% endif %}"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5" class="px-6 py-16 text-center text-slate-500">لا يوجد مستخدمين مسجلين.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                {% if users.has_other_pages %}
+                <div class="flex items-center justify-between px-6 py-4 border-t border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-white/[0.02]">
+                    <p class="text-sm text-slate-500 dark:text-slate-400">
+                        عرض الصفحة <span class="font-en text-slate-800 dark:text-white font-bold">{{ users.number }}</span> من <span class="font-en text-slate-800 dark:text-white font-bold">{{ users.paginator.num_pages }}</span>
+                    </p>
+                    <div class="flex gap-2 font-en">
+                        {% if users.has_previous %}
+                        <a href="?page={{ users.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if selected_role != 'all' %}&role={{ selected_role }}{% endif %}{% if selected_status != 'all' %}&status={{ selected_status }}{% endif %}" class="w-8 h-8 flex items-center justify-center rounded-lg bg-white dark:bg-white/5 hover:bg-primary/10 dark:hover:bg-primary/20 text-slate-500 dark:text-slate-400 hover:text-primary transition-colors border border-slate-200 dark:border-white/5 shadow-sm dark:shadow-none" title="السابق">
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </a>
+                        {% endif %}
+
+                        {% if users.has_next %}
+                        <a href="?page={{ users.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if selected_role != 'all' %}&role={{ selected_role }}{% endif %}{% if selected_status != 'all' %}&status={{ selected_status }}{% endif %}" class="w-8 h-8 flex items-center justify-center rounded-lg bg-white dark:bg-white/5 hover:bg-primary/10 dark:hover:bg-primary/20 text-slate-500 dark:text-slate-400 hover:text-primary transition-colors border border-slate-200 dark:border-white/5 shadow-sm dark:shadow-none" title="التالي">
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+
+    <div x-show="userModalOpen" @keydown.escape.window="userModalOpen = false" style="display: none;" class="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
+        <div x-show="userModalOpen" x-transition.opacity @click="userModalOpen = false" class="absolute inset-0 bg-slate-900/60 dark:bg-black/80 backdrop-blur-sm cursor-pointer" title="انقر للإغلاق"></div>
+        <div x-show="userModalOpen" x-transition.scale.95 class="bento-card border border-slate-200 dark:border-white/10 bg-white dark:bg-cardBg w-full max-w-lg relative z-10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="px-6 py-4 border-b border-slate-100 dark:border-white/5 flex justify-between items-center bg-slate-50 dark:bg-white/[0.02] shrink-0">
+                <h3 class="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                    <i class="fa-solid" :class="isEditMode ? 'fa-pen text-primary' : 'fa-user-plus text-secondary'"></i>
+                    <span x-text="isEditMode ? 'تعديل بيانات المستخدم' : 'إضافة مستخدم جديد'"></span>
+                </h3>
+                <button @click="userModalOpen = false" class="text-slate-400 hover:text-red-500 transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            <form id="userActionForm" @submit.prevent="submitData()" class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-4">
+                {% csrf_token %}
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">الاسم الكامل <span class="text-red-500">*</span></label>
+                    <input type="text" x-model="formData.full_name" required placeholder="أدخل اسم المستخدم..." class="w-full bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-slate-800 dark:text-white focus:outline-none focus:border-secondary/50 transition-all">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">البريد الإلكتروني <span class="text-red-500">*</span></label>
+                    <input type="email" x-model="formData.email" required placeholder="example@email.com" class="w-full bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-slate-800 dark:text-white font-en focus:outline-none focus:border-secondary/50 transition-all text-left" dir="ltr">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">رقم الهاتف <span class="text-slate-400 font-normal text-xs">(اختياري)</span></label>
+                    <input type="tel" x-model="formData.phone" placeholder="05XXXXXXXX" class="w-full bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-slate-800 dark:text-white font-en focus:outline-none focus:border-secondary/50 transition-all text-left" dir="ltr">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">الدور / الصلاحية <span class="text-red-500">*</span></label>
+                    <select x-model="formData.role" required class="w-full bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-slate-800 dark:text-white focus:outline-none focus:border-secondary/50 transition-all cursor-pointer">
+                        <option value="patient">مريض (صلاحيات أساسية)</option>
+                        <option value="doctor">طبيب (صلاحيات كادر طبي)</option>
+                        <option value="admin">مدير نظام (صلاحيات كاملة)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">
+                        كلمة المرور 
+                        <span x-show="!isEditMode" class="text-red-500">*</span>
+                        <span x-show="isEditMode" class="text-xs text-slate-400 font-normal ml-2">(اتركها فارغة إذا لم ترد تغييرها)</span>
+                    </label>
+                    <input type="password" x-model="formData.password" :required="!isEditMode" placeholder="********" class="w-full bg-slate-50 dark:bg-black/20 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-slate-800 dark:text-white focus:outline-none focus:border-secondary/50 transition-all text-left font-en" dir="ltr">
+                </div>
+                <div class="pt-4 border-t border-slate-100 dark:border-white/5 flex justify-end gap-3 mt-6">
+                    <button type="button" @click="userModalOpen = false" class="px-5 py-2.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors font-bold text-sm">إلغاء</button>
+                    <button type="submit" class="px-6 py-2.5 rounded-xl text-white font-bold text-sm transition-all shadow-lg flex items-center gap-2"
+                            :class="isEditMode ? 'bg-primary hover:bg-primary/80 shadow-primary/30' : 'bg-secondary hover:bg-secondary/80 shadow-secondary/30'">
+                        <i class="fa-solid" :class="isEditMode ? 'fa-save' : 'fa-check'"></i>
+                        <span x-text="isEditMode ? 'حفظ التعديلات' : 'تأكيد الإضافة'"></span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div x-show="recordModalOpen" style="display: none;" class="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm cursor-pointer" @click="recordModalOpen = false"></div>
+        <div x-show="recordModalOpen" x-transition.scale.95 class="bento-card border border-slate-200 dark:border-white/10 bg-white dark:bg-cardBg w-full max-w-2xl relative z-10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            
+            <div class="px-6 py-4 border-b border-slate-100 dark:border-white/5 flex justify-between items-center bg-slate-50 dark:bg-white/[0.02] shrink-0">
+                <h3 class="text-lg font-bold text-teal-600 dark:text-teal-400 flex items-center gap-2">
+                    <i class="fa-solid fa-notes-medical"></i> السجل الطبي لـ <span x-text="patientNameForRecord" class="text-slate-800 dark:text-white mr-1"></span>
+                </h3>
+                <button @click="recordModalOpen = false" class="text-slate-400 hover:text-red-500 transition-colors">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto custom-scrollbar bg-slate-50/50 dark:bg-slate-900/50">
+                <template x-if="isLoadingRecord">
+                    <div class="flex flex-col items-center justify-center py-10">
+                        <i class="fa-solid fa-spinner fa-spin text-teal-500 text-3xl mb-3"></i>
+                        <p class="text-slate-500 dark:text-slate-400 text-sm font-bold">جاري جلب السجل الطبي...</p>
+                    </div>
+                </template>
+
+                <template x-if="!isLoadingRecord && recordData === 'not_found'">
+                    <div class="flex flex-col items-center justify-center py-10 text-slate-500 dark:text-slate-400">
+                        <i class="fa-solid fa-folder-open text-4xl mb-3 opacity-30"></i>
+                        <p class="font-bold">لا يوجد سجل طبي مُدخل لهذا المريض حتى الآن.</p>
+                    </div>
+                </template>
+                
+                <template x-if="!isLoadingRecord && recordData === 'error'">
+                    <div class="flex flex-col items-center justify-center py-10 text-red-500">
+                        <i class="fa-solid fa-triangle-exclamation text-4xl mb-3 opacity-50"></i>
+                        <p class="font-bold">حدث خطأ أثناء جلب السجل. تأكد من إعداد المسار في السيرفر.</p>
+                    </div>
+                </template>
+
+                <template x-if="!isLoadingRecord && typeof recordData === 'object' && recordData !== null">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                            <span class="block text-xs text-slate-500 dark:text-slate-400 mb-1"><i class="fa-solid fa-cake-candles mr-1"></i> العمر</span>
+                            <span class="font-bold text-slate-800 dark:text-slate-200" x-text="(recordData.age || 'غير مسجل') + ' سنة'"></span>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                            <span class="block text-xs text-slate-500 dark:text-slate-400 mb-1"><i class="fa-solid fa-weight-scale mr-1"></i> الوزن</span>
+                            <span class="font-bold text-slate-800 dark:text-slate-200" x-text="(recordData.weight || 'غير مسجل') + ' كجم'"></span>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                            <span class="block text-xs text-slate-500 dark:text-slate-400 mb-1"><i class="fa-solid fa-venus-mars mr-1"></i> الجنس</span>
+                            <span class="font-bold text-slate-800 dark:text-slate-200" x-text="recordData.gender === 'male' ? 'ذكر' : (recordData.gender === 'female' ? 'أنثى' : 'غير مسجل')"></span>
+                        </div>
+                        <div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                            <span class="block text-xs text-slate-500 dark:text-slate-400 mb-1"><i class="fa-solid fa-ring mr-1"></i> الحالة الاجتماعية</span>
+                            <span class="font-bold text-slate-800 dark:text-slate-200" x-text="recordData.social_status === 'married' ? 'متزوج' : (recordData.social_status === 'single' ? 'عازب' : 'غير مسجل')"></span>
+                        </div>
+                        
+                        <div class="md:col-span-2 bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                            <span class="block text-xs text-slate-500 dark:text-slate-400 mb-1"><i class="fa-solid fa-heart-pulse mr-1 text-red-400"></i> الأمراض المزمنة</span>
+                            <span class="font-bold text-slate-800 dark:text-slate-200 whitespace-pre-wrap" x-text="recordData.chronic_diseases || 'لا يوجد'"></span>
+                        </div>
+                        
+                        <div class="md:col-span-2 bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                            <span class="block text-xs text-slate-500 dark:text-slate-400 mb-1"><i class="fa-solid fa-pills mr-1 text-blue-400"></i> الأدوية الحالية</span>
+                            <span class="font-bold text-slate-800 dark:text-slate-200 whitespace-pre-wrap" x-text="recordData.medications || 'لا يوجد'"></span>
+                        </div>
+                        
+                        <div class="md:col-span-2 bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
+                            <span class="block text-xs text-slate-500 dark:text-slate-400 mb-1"><i class="fa-solid fa-file-medical-alt mr-1"></i> التاريخ المرضي والتشخيصات السابقة</span>
+                            <span class="font-bold text-slate-800 dark:text-slate-200 whitespace-pre-wrap" x-text="recordData.previous_tests_diagnoses || 'لا يوجد'"></span>
+                        </div>
+                        
+                        <div class="md:col-span-2 flex gap-3 mt-2 flex-wrap">
+                            <template x-if="recordData.is_smoker == 1">
+                                <span class="bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400 px-3 py-1 rounded-full text-xs font-bold border border-red-200 dark:border-red-500/30"><i class="fa-solid fa-smoking mr-1"></i> مدخن</span>
+                            </template>
+                            <template x-if="recordData.uses_blood_thinners == 1">
+                                <span class="bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400 px-3 py-1 rounded-full text-xs font-bold border border-orange-200 dark:border-orange-500/30"><i class="fa-solid fa-droplet mr-1"></i> يستخدم مميعات دم (<span x-text="recordData.blood_thinner_name"></span>)</span>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
